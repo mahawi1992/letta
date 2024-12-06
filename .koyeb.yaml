@@ -1,0 +1,17 @@
+service:
+  name: letta-ai
+  instance_types:
+    - name: system
+      type: small
+  ports:
+    - port: 8283
+      protocol: http
+  routes:
+    - path: /
+      protocol: http
+  envs:
+    - key: LETTA_ENVIRONMENT
+      value: PRODUCTION
+  scale:
+    min: 1
+    max: 1
