@@ -1,0 +1,14 @@
+{
+    "preset": "default",
+    "persona": "default",
+    "human": "default",
+    "archival_storage_type": "chroma",
+    "archival_storage_path": "c:/Users/Shadow/CascadeProjects/letta/chroma",
+    "recall_storage_type": "sqlite",
+    "recall_storage_path": "c:/Users/Shadow/CascadeProjects/letta",
+    "metadata_storage_type": "sqlite",
+    "metadata_storage_path": "c:/Users/Shadow/CascadeProjects/letta",
+    "core_memory_persona_char_limit": 2000,
+    "core_memory_human_char_limit": 2000,
+    "policies_accepted": true
+}
