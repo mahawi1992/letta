@@ -1,21 +1,64 @@
-IyBUaGUgYnVpbGRlciBpbWFnZSwgdXNlZCB0byBidWlsZCB0aGUgdmlydHVhbCBlbnZpcm9ubWVudApGUk9NIHBp
-dGhvbjozLjEyLjItYm9va3dvcm0gYXMgYnVpbGRlcgpBUkcgTEVUVEFfRU5WSVJPTk1FTlQ9UFJPRFVD
-VElPTgpFTlYgTEVUVEFfRU5WSVJPTk1FTlQ9JHtMRVRUQV9FTlZJUk9OTUVOVH0KUlVOIHBpcCBpbnN0
-YWxsIHBvZXRyeT09MS44LjIKCkVOViBQT0VUUllfTk9fSU5URVJBQ1RJT049MSBcCiAgICBQT0VUUllf
-VklSVFVBTEVOVlNfSU5fUFJPSkVDVD0xIFwKICAgIFBPRVRSWV9WSVJUVUFMRU5WU19DUkVBVEU9MSBc
-CiAgICBQT0VUUllfQ0FDSEVfRElSPS90bXAvcG9ldHJ5X2NhY2hlCgpXT1JLRElSIC9hcHAKCkNPUFkg
-cHlwcm9qZWN0LnRvbWwgcG9ldHJ5LmxvY2sgLi8KUlVOIHBvZXRyeSBsb2NrIC0tbm8tdXBkYXRlClJV
-TiBpZiBbICIkTEVUVEFfRU5WSVJPTk1FTlQiID0gIkRFVkVMT1BNRU5UIiAgXSA7IHRoZW4gXAogICAg
-cG9ldHJ5IGluc3RhbGwgLS1uby1yb290IC1FICJwb3N0Z3JlcyBzZXJ2ZXIgZGV2IiA7IFwKICAgIGVs
-c2UgXAogICAgcG9ldHJ5IGluc3RhbGwgLS1uby1yb290IC0tYWxsLWV4dHJhcyAmJiBcCiAgICBybSAt
-cmYgJFBPRVRSWV9DQUNIRV9ESVIgOyAgXAogICAgZmkKCiMgVGhlIHJ1bnRpbWUgaW1hZ2UsIHVzZWQg
-dG8ganVzdCBydW4gdGhlIGNvZGUgcHJvdmlkZWQgaXRzIHZpcnR1YWwgZW52aXJvbm1lbnQKRlJPTSBw
-eXRob246My4xMi4yLXNsaW0tYm9va3dvcm0gYXMgcnVudGltZQpBUkcgTEVUVEFfRU5WSVJPTk1FTlQ9
-UFJPRFVDVEJOTQBWU1ZfR05JTk5VUl9MTEVUVe+/vT0kDSAjv4cKUlVOIHBpY2sgdXAgdGhlIGNvbnRl
-bnRzIG9mIHRoZSBmaWxlClJVTiBwa2cgdXBkYXRlIApSVU4gcGtnIGxpc3QgfCBncmVwICdhbGwtZXh0
-cmFzJyB8IHdoaWxlIHJlYWQgcGtnOyBkbyBwa2cgaW5zdGFsbCAiJHBrZyI7IGRvbmUKCiMgQ29weSB0
-aGUgcnVudGltZSBmaWxlcwpDT1BZIC0tZnJvbT1idWlsZGVyICR7VklSVFVBTF9FTlZ9ICR7VklSVFVB
-TF9FTlZ9CgpXT1JLRElSIC8KCkNPUFkgLi90ZXN0cyAvdGVzdHMKQ09QWSAuL2xldHRhIC9sZXR0YQpD
-T1BZIC4vYWxlbWJpYy5pbmkgL2FsZW1iaWMuaW5pCkNPUFkgLi9hbGVtYmljIC9hbGVtYmljCkNPUFkg
-Li9sZXR0YS9zZXJ2ZXIvc3RhcnR1cC5zaCAvc3RhcnR1cC5zaApSVU4gY2htb2QgK3ggL3N0YXJ0dXAu
-c2gKCkVYUE9TRSAgODI4MwoKQ01EIFsiL3N0YXJ0dXAuc2giXQo=
+# The builder image, used to build the virtual environment
+FROM python:3.12.2-bookworm as builder
+ARG LETTA_ENVIRONMENT=PRODUCTION
+ENV LETTA_ENVIRONMENT=${LETTA_ENVIRONMENT}
+RUN pip install poetry==1.8.2
+
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_IN_PROJECT=1 \
+    POETRY_VIRTUALENVS_CREATE=1 \
+    POETRY_CACHE_DIR=/tmp/poetry_cache
+
+WORKDIR /app
+
+COPY pyproject.toml poetry.lock ./
+RUN poetry lock --no-update
+RUN if [ "$LETTA_ENVIRONMENT" = "DEVELOPMENT"  ] ; then \
+    poetry install --no-root -E "postgres server dev" ; \
+    else \
+    poetry install --no-root --all-extras && \
+    rm -rf $POETRY_CACHE_DIR ;  \
+    fi
+
+# The runtime image, used to just run the code provided its virtual environment
+FROM python:3.12.2-slim-bookworm as runtime
+ARG LETTA_ENVIRONMENT=PRODUCTION
+ENV LETTA_ENVIRONMENT=${LETTA_ENVIRONMENT}
+ENV VIRTUAL_ENV=/app/.venv \
+    PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH=/
+
+COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
+
+COPY ./letta /letta
+COPY ./alembic.ini /alembic.ini
+COPY ./alembic /alembic
+COPY ./letta/server/startup.sh /letta/server/startup.sh
+RUN chmod +x /letta/server/startup.sh
+
+WORKDIR /
+
+EXPOSE 8283
+
+CMD ["/letta/server/startup.sh"]
+
+# allow for in-container development and testing
+FROM builder as development
+ARG LETTA_ENVIRONMENT=DEVELOPMENT
+ENV LETTA_ENVIRONMENT=${LETTA_ENVIRONMENT}
+ENV VIRTUAL_ENV=/app/.venv \
+    PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH=/
+
+WORKDIR /
+
+COPY ./tests /tests
+COPY ./letta /letta
+COPY ./alembic.ini /alembic.ini
+COPY ./alembic /alembic
+COPY ./letta/server/startup.sh /letta/server/startup.sh
+RUN chmod +x /letta/server/startup.sh
+
+EXPOSE 8283
+
+CMD ["/letta/server/startup.sh"]
