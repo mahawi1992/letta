@@ -20,37 +20,45 @@ RUN if [ "$LETTA_ENVIRONMENT" = "DEVELOPMENT"  ] ; then \
     rm -rf $POETRY_CACHE_DIR ;  \
     fi
 
-
 # The runtime image, used to just run the code provided its virtual environment
 FROM python:3.12.2-slim-bookworm as runtime
 ARG LETTA_ENVIRONMENT=PRODUCTION
 ENV LETTA_ENVIRONMENT=${LETTA_ENVIRONMENT}
 ENV VIRTUAL_ENV=/app/.venv \
-    PATH="/app/.venv/bin:$PATH"
+    PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH=/
 
 COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 
 COPY ./letta /letta
 COPY ./alembic.ini /alembic.ini
 COPY ./alembic /alembic
+COPY ./letta/server/startup.sh /letta/server/startup.sh
+RUN chmod +x /letta/server/startup.sh
+
+WORKDIR /
 
 EXPOSE 8283
 
-CMD ./letta/server/startup.sh
+CMD ["/letta/server/startup.sh"]
 
 # allow for in-container development and testing
 FROM builder as development
-ARG LETTA_ENVIRONMENT=PRODUCTION
+ARG LETTA_ENVIRONMENT=DEVELOPMENT
 ENV LETTA_ENVIRONMENT=${LETTA_ENVIRONMENT}
 ENV VIRTUAL_ENV=/app/.venv \
-    PATH="/app/.venv/bin:$PATH"
-ENV PYTHONPATH=/
+    PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH=/
+
 WORKDIR /
+
 COPY ./tests /tests
 COPY ./letta /letta
 COPY ./alembic.ini /alembic.ini
 COPY ./alembic /alembic
-#COPY ./configs/server_config.yaml /root/.letta/config
-EXPOSE 8083
+COPY ./letta/server/startup.sh /letta/server/startup.sh
+RUN chmod +x /letta/server/startup.sh
 
-CMD ./letta/server/startup.sh
+EXPOSE 8283
+
+CMD ["/letta/server/startup.sh"]
