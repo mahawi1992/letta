@@ -47,7 +47,7 @@ class ModelSettings(BaseSettings):
     )
 
     # google ai
-    gemini_api_key: Optional[str] = None
+    google_ai_api_key: Optional[str] = Field(None, env="GOOGLE_AI_API_KEY")
 
     # together
     together_api_key: Optional[str] = None

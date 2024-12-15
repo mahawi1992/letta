@@ -1,6 +1,6 @@
 import configparser
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, Field
 from typing import Optional
 
 from letta.config import get_field, set_field
@@ -18,8 +18,8 @@ class LettaCredentials:
     openai_auth_type: str = "bearer_token"
     openai_key: Optional[str] = os.getenv("OPENAI_API_KEY")
 
-    # gemini config
-    google_ai_key: Optional[str] = None
+    # google ai config
+    google_ai_key: Optional[str] = Field(None, env="GOOGLE_AI_API_KEY")
     google_ai_service_endpoint: Optional[str] = None
 
     # anthropic config
