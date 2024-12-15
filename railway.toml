@@ -11,7 +11,7 @@ restartPolicyMaxRetries = 10
 [env]
 PORT = "8283"
 HOST = "0.0.0.0"
-POSTGRES_DB = "letta"
+LETTA_PG_URI = "${DATABASE_URL}"
 LETTA_LLM_ENDPOINT = "https://generativelanguage.googleapis.com"
 LETTA_LLM_ENDPOINT_TYPE = "google_ai"
 LETTA_LLM_MODEL = "gemini-2.0-flash"
