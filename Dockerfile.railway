@@ -1,0 +1,38 @@
+# Use Python base image
+FROM python:3.11-slim
+
+# Install required system packages
+RUN apt-get update && apt-get install -y \
+    python3-dev \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG LETTA_ENVIRONMENT=PRODUCTION
+ENV LETTA_ENVIRONMENT=${LETTA_ENVIRONMENT} \
+    POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_IN_PROJECT=1 \
+    POETRY_VIRTUALENVS_CREATE=1 \
+    POETRY_CACHE_DIR=/tmp/poetry_cache \
+    PATH="/app/.venv/bin:$PATH"
+
+WORKDIR /app
+
+# Install poetry
+RUN pip install --no-cache-dir poetry==1.8.2
+
+# Copy dependency files
+COPY pyproject.toml poetry.lock ./
+
+# Install dependencies
+RUN poetry install --no-dev --no-root
+
+# Copy application code
+COPY . .
+
+# Install the application
+RUN poetry install --no-dev
+
+EXPOSE 8283
+
+CMD ["poetry", "run", "python", "-m", "letta.server", "--host", "0.0.0.0"]
